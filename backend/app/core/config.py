@@ -1,6 +1,8 @@
+import os
 import secrets
 import warnings
-from typing import Annotated, Any, Literal
+from pathlib import Path
+from typing import Annotated, Any, Literal, ClassVar
 
 from pydantic import (
     AnyUrl,
@@ -14,6 +16,7 @@ from pydantic import (
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
+from dotenv import load_dotenv
 
 
 def parse_cors(v: Any) -> list[str] | str:
@@ -25,12 +28,30 @@ def parse_cors(v: Any) -> list[str] | str:
 
 
 class Settings(BaseSettings):
+    _base_path: ClassVar[Path] = Path(__file__).resolve().parent.parent.parent.parent
+    _local_env: ClassVar[Path] = _base_path / ".env.local"
+    _default_env: ClassVar[Path] = _base_path / ".env"
+
+    # Вариант без возможности использования переменных окружения, игнорируя их.
+    # Читается только .env (+ .env.local если есть и это не контейнер)
+    load_dotenv(_default_env)
+    if os.getcwd() != "/app" and _local_env.exists():
+        load_dotenv(_local_env, override=True)
+
     model_config = SettingsConfigDict(
-        # Use top level .env file (one level above ./backend/)
-        env_file="../.env",
         env_ignore_empty=True,
         extra="ignore",
     )
+
+    # Вариант с возможностью переменных окружения, которые перекрывают .env переменные
+    # model_config = SettingsConfigDict(
+    #     # Логика выбора env_file
+    #     env_file=(_default_env, _local_env) if os.getcwd() != "/app" and _local_env.exists() else _default_env,
+    #     env_ignore_empty=True,
+    #     extra="ignore",
+    #     env_file_encoding="utf-8",
+    # )
+
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = secrets.token_urlsafe(32)
     # 60 minutes * 24 hours * 8 days = 8 days
@@ -52,10 +73,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str
     SENTRY_DSN: HttpUrl | None = None
     POSTGRES_SERVER: str
-    POSTGRES_PORT: int = 5432
+    POSTGRES_PORT: int = 5439
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
+    PROJECT_PATH: str = str(_base_path)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

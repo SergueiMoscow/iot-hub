@@ -42,3 +42,4 @@ yarn-error.log*
 Thumbs.db  # Windows
 
 readme2.md
+.env.local
