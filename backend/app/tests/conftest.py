@@ -1,5 +1,6 @@
 from collections.abc import Generator
 
+import os
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, delete
@@ -10,18 +11,55 @@ from app.main import app
 from app.models import Item, User
 from app.tests.utils.user import authentication_token_from_email
 from app.tests.utils.utils import get_superuser_token_headers
+from alembic import command
+from sqlalchemy import text as sa_text
+from alembic.config import Config
+
+
+@pytest.fixture(scope="session")
+def apply_migrations():
+    backend_path = os.path.join(settings.PROJECT_PATH, "backend")
+    assert "_test_" in str(settings.SQLALCHEMY_DATABASE_URI), "Попытка использовать не тестовую схему."
+    alembic_ini = os.path.join(backend_path, "alembic.ini")
+
+    # Создаём схему с использованием глобального engine
+    with engine.connect() as conn:
+        conn.execution_options(isolation_level="AUTOCOMMIT").execute(
+            sa_text(f"CREATE SCHEMA IF NOT EXISTS {settings.POSTGRES_SCHEMA}")
+        )
+
+    # Настраиваем Alembic
+    alembic_cfg = Config(alembic_ini)
+    alembic_cfg.set_main_option("sqlalchemy.url", str(settings.SQLALCHEMY_DATABASE_URI))
+    alembic_cfg.set_main_option("script_location", os.path.join(backend_path, "app", "alembic"))
+
+    # Выполняем миграции
+    command.downgrade(alembic_cfg, "base")
+    command.upgrade(alembic_cfg, "head")
+
+    yield command, alembic_cfg
+
+    # Откатываем миграции
+    command.downgrade(alembic_cfg, "base")
+
+    # Удаляем схему
+    with engine.connect() as conn:
+        conn.execution_options(isolation_level="AUTOCOMMIT").execute(
+            sa_text(f"DROP SCHEMA IF EXISTS {settings.POSTGRES_SCHEMA} CASCADE")
+        )
 
 
 @pytest.fixture(scope="session", autouse=True)
-def db() -> Generator[Session, None, None]:
+def db(apply_migrations):
+    from sqlmodel import Session
     with Session(engine) as session:
         init_db(session)
         yield session
-        statement = delete(Item)
-        session.execute(statement)
-        statement = delete(User)
-        session.execute(statement)
-        session.commit()
+    statement = delete(Item)
+    session.execute(statement)
+    statement = delete(User)
+    session.execute(statement)
+    session.commit()
 
 
 @pytest.fixture(scope="module")

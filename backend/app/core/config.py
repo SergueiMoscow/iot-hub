@@ -1,22 +1,16 @@
 import os
 import secrets
+import sys
 import warnings
+import uuid
 from pathlib import Path
 from typing import Annotated, Any, Literal, ClassVar
+from dotenv import load_dotenv
 
-from pydantic import (
-    AnyUrl,
-    BeforeValidator,
-    EmailStr,
-    HttpUrl,
-    PostgresDsn,
-    computed_field,
-    model_validator,
-)
+from pydantic import AnyUrl, BeforeValidator, EmailStr, HttpUrl, PostgresDsn, computed_field, model_validator
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
-from dotenv import load_dotenv
 
 
 def parse_cors(v: Any) -> list[str] | str:
@@ -28,12 +22,10 @@ def parse_cors(v: Any) -> list[str] | str:
 
 
 class Settings(BaseSettings):
-    _base_path: ClassVar[Path] = Path(__file__).resolve().parent.parent.parent.parent
-    _local_env: ClassVar[Path] = _base_path / ".env.local"
-    _default_env: ClassVar[Path] = _base_path / ".env"
+    _base_path = Path(__file__).resolve().parent.parent.parent.parent
+    _local_env = _base_path / ".env.local"
+    _default_env = _base_path / ".env"
 
-    # Вариант без возможности использования переменных окружения, игнорируя их.
-    # Читается только .env (+ .env.local если есть и это не контейнер)
     load_dotenv(_default_env)
     if os.getcwd() != "/app" and _local_env.exists():
         load_dotenv(_local_env, override=True)
@@ -43,32 +35,19 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Вариант с возможностью переменных окружения, которые перекрывают .env переменные
-    # model_config = SettingsConfigDict(
-    #     # Логика выбора env_file
-    #     env_file=(_default_env, _local_env) if os.getcwd() != "/app" and _local_env.exists() else _default_env,
-    #     env_ignore_empty=True,
-    #     extra="ignore",
-    #     env_file_encoding="utf-8",
-    # )
-
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = secrets.token_urlsafe(32)
-    # 60 minutes * 24 hours * 8 days = 8 days
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
+    POSTGRES_SCHEMA: str = "test_schema" if "pytest" in sys.modules else "public"
 
-    BACKEND_CORS_ORIGINS: Annotated[
-        list[AnyUrl] | str, BeforeValidator(parse_cors)
-    ] = []
+    BACKEND_CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = []
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field
     @property
     def all_cors_origins(self) -> list[str]:
-        return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [
-            self.FRONTEND_HOST
-        ]
+        return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [self.FRONTEND_HOST]
 
     PROJECT_NAME: str
     SENTRY_DSN: HttpUrl | None = None
@@ -79,10 +58,10 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = ""
     PROJECT_PATH: str = str(_base_path)
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
-        return MultiHostUrl.build(
+        uri = MultiHostUrl.build(
             scheme="postgresql+psycopg",
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,
@@ -90,6 +69,14 @@ class Settings(BaseSettings):
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
+        if "pytest" in sys.modules:
+            if "TEST" not in self.POSTGRES_SCHEMA.upper():
+                db_schema = self.POSTGRES_SCHEMA + '_test_' + str(uuid.uuid4()).replace('-', '_')
+            else:
+                db_schema = self.POSTGRES_SCHEMA
+            self.POSTGRES_SCHEMA = db_schema
+            return f"{uri}?options=-csearch_path={db_schema}"
+        return f"{uri}?options=-csearch_path%3D{self.POSTGRES_SCHEMA}"
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
@@ -108,7 +95,7 @@ class Settings(BaseSettings):
 
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field
     @property
     def emails_enabled(self) -> bool:
         return bool(self.SMTP_HOST and self.EMAILS_FROM_EMAIL)
@@ -132,11 +119,8 @@ class Settings(BaseSettings):
     def _enforce_non_default_secrets(self) -> Self:
         self._check_default_secret("SECRET_KEY", self.SECRET_KEY)
         self._check_default_secret("POSTGRES_PASSWORD", self.POSTGRES_PASSWORD)
-        self._check_default_secret(
-            "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
-        )
-
+        self._check_default_secret("FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD)
         return self
 
 
-settings = Settings()  # type: ignore
+settings = Settings()
