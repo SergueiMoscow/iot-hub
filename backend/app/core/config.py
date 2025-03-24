@@ -35,6 +35,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    APP_PORT: int = 8000
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
