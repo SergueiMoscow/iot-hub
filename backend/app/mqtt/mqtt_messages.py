@@ -1,6 +1,9 @@
 import json
 from datetime import datetime
 import pytz
+from app.api.deps import SessionDep
+from app.core.db import engine
+from sqlmodel import Session
 from app.core.config import settings
 from app.core.setup_logger import setup_logger
 from app.models.device_data import DeviceData
@@ -82,20 +85,27 @@ def save_to_db(topic: str, payload: str):
 
     object_, room, device, state, *module = parts
     module = "/".join(module) if module else ""
+    try:
+        payload_dict = json.loads(payload)
+        value = json.dumps(payload_dict)  # Сохраняем весь JSON как строку
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to decode payload: {e}")
+        return
     message = DeviceData(
         object=object_,
         room=room,
         device=device,
         state=state,
         module=module,
-        value=payload,
+        value=value,
         timestamp=datetime.now()
     )
-    with Session() as session:
+    with Session(engine) as session:
         try:
             session.add(message)
             session.commit()
             session.refresh(message)
+            logger.info(f"Saved message to DB: {message.id}")
         except Exception as e:
             logger.error(f"Failed to save message to DB: {e}")
             session.rollback()
