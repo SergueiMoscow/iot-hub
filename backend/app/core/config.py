@@ -45,6 +45,14 @@ class Settings(BaseSettings):
 
     BACKEND_CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = []
 
+    # RabbitMQ
+    RABBITMQ_HOST: str = 'localhost'
+    RABBITMQ_PORT: int = 1883
+    RABBITMQ_USER: str = 'guest'
+    RABBITMQ_PASSWORD: str = 'guest'
+    RABBITMQ_API_PORT: int = 15672
+    TOPIC: str = '#'
+
     @computed_field
     @property
     def all_cors_origins(self) -> list[str]:
@@ -122,6 +130,7 @@ class Settings(BaseSettings):
         self._check_default_secret("POSTGRES_PASSWORD", self.POSTGRES_PASSWORD)
         self._check_default_secret("FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD)
         return self
+
 
 
 settings = Settings()

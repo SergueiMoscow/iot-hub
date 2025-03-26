@@ -23,6 +23,8 @@ dependencies = [
     "pyjwt<3.0.0,>=2.8.0",
     "dotenv>=0.9.9",
     "uvicorn>=0.30.6",
+    "paho-mqtt>=2.1.0",
+    "pytz>=2025.2",
 ]
 
 [tool.uv]

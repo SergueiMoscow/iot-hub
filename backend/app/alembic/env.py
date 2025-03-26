@@ -18,7 +18,9 @@ fileConfig(config.config_file_name)
 # target_metadata = mymodel.Base.metadata
 # target_metadata = None
 
-from app.models import SQLModel  # noqa
+from sqlmodel import SQLModel  # noqa
+from app.models.user import User, Item
+from app.models.device_data import DeviceData
 from app.core.config import settings # noqa
 
 target_metadata = SQLModel.metadata
