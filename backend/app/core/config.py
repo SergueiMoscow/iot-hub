@@ -14,8 +14,8 @@ from typing_extensions import Self
 
 
 def parse_cors(v: Any) -> list[str] | str:
-    if isinstance(v, str) and not v.startswith("["):
-        return [i.strip() for i in v.split(",")]
+    if isinstance(v, str) and not v.startswith('['):
+        return [i.strip() for i in v.split(',')]
     elif isinstance(v, list | str):
         return v
     raise ValueError(v)
@@ -23,25 +23,26 @@ def parse_cors(v: Any) -> list[str] | str:
 
 class Settings(BaseSettings):
     _base_path = Path(__file__).resolve().parent.parent.parent.parent
-    _local_env = _base_path / ".env.local"
-    _default_env = _base_path / ".env"
+    _local_env = _base_path / '.env.local'
+    _default_env = _base_path / '.env'
 
     load_dotenv(_default_env)
-    if os.getcwd() != "/app" and _local_env.exists():
+    if os.getcwd() != '/app' and _local_env.exists():
         load_dotenv(_local_env, override=True)
 
     model_config = SettingsConfigDict(
         env_ignore_empty=True,
-        extra="ignore",
+        extra='ignore',
     )
-
+    APP_SCHEME: str = 'http'
+    APP_HOST: str = 'localhost'
     APP_PORT: int = 8000
-    API_V1_STR: str = "/api/v1"
+    API_V1_STR: str = '/api/v1'
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
-    FRONTEND_HOST: str = "http://localhost:5173"
-    ENVIRONMENT: Literal["local", "staging", "production"] = "local"
-    POSTGRES_SCHEMA: str = "test_schema" if "pytest" in sys.modules else "public"
+    FRONTEND_HOST: str = 'http://localhost:5173'
+    ENVIRONMENT: Literal["local", "staging", "production"] = 'local'
+    POSTGRES_SCHEMA: str = 'test_schema' if 'pytest' in sys.modules else 'public'
 
     BACKEND_CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = []
 
@@ -56,36 +57,36 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def all_cors_origins(self) -> list[str]:
-        return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [self.FRONTEND_HOST]
+        return [str(origin).rstrip('/') for origin in self.BACKEND_CORS_ORIGINS] + [self.FRONTEND_HOST]
 
     PROJECT_NAME: str
     SENTRY_DSN: HttpUrl | None = None
     POSTGRES_SERVER: str
     POSTGRES_PORT: int = 5439
     POSTGRES_USER: str
-    POSTGRES_PASSWORD: str = ""
-    POSTGRES_DB: str = ""
+    POSTGRES_PASSWORD: str = ''
+    POSTGRES_DB: str = ''
     PROJECT_PATH: str = str(_base_path)
 
     @computed_field
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
         uri = MultiHostUrl.build(
-            scheme="postgresql+psycopg",
+            scheme='postgresql+psycopg',
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,
             host=self.POSTGRES_SERVER,
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
-        if "pytest" in sys.modules:
-            if "TEST" not in self.POSTGRES_SCHEMA.upper():
+        if 'pytest' in sys.modules:
+            if 'TEST' not in self.POSTGRES_SCHEMA.upper():
                 db_schema = self.POSTGRES_SCHEMA + '_test_' + str(uuid.uuid4()).replace('-', '_')
             else:
                 db_schema = self.POSTGRES_SCHEMA
             self.POSTGRES_SCHEMA = db_schema
-            return f"{uri}?options=-csearch_path={db_schema}"
-        return f"{uri}?options=-csearch_path%3D{self.POSTGRES_SCHEMA}"
+            return f'{uri}?options=-csearch_path={db_schema}'
+        return f'{uri}?options=-csearch_path%3D{self.POSTGRES_SCHEMA}'
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
@@ -96,7 +97,7 @@ class Settings(BaseSettings):
     EMAILS_FROM_EMAIL: EmailStr | None = None
     EMAILS_FROM_NAME: EmailStr | None = None
 
-    @model_validator(mode="after")
+    @model_validator(mode='after')
     def _set_default_emails_from(self) -> Self:
         if not self.EMAILS_FROM_NAME:
             self.EMAILS_FROM_NAME = self.PROJECT_NAME
@@ -109,26 +110,26 @@ class Settings(BaseSettings):
     def emails_enabled(self) -> bool:
         return bool(self.SMTP_HOST and self.EMAILS_FROM_EMAIL)
 
-    EMAIL_TEST_USER: EmailStr = "test@example.com"
+    EMAIL_TEST_USER: EmailStr = 'test@example.com'
     FIRST_SUPERUSER: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
-        if value == "changethis":
+        if value == 'changethis':
             message = (
                 f'The value of {var_name} is "changethis", '
-                "for security, please change it, at least for deployments."
+                'for security, please change it, at least for deployments.'
             )
-            if self.ENVIRONMENT == "local":
+            if self.ENVIRONMENT == 'local':
                 warnings.warn(message, stacklevel=1)
             else:
                 raise ValueError(message)
 
     @model_validator(mode="after")
     def _enforce_non_default_secrets(self) -> Self:
-        self._check_default_secret("SECRET_KEY", self.SECRET_KEY)
-        self._check_default_secret("POSTGRES_PASSWORD", self.POSTGRES_PASSWORD)
-        self._check_default_secret("FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD)
+        self._check_default_secret('SECRET_KEY', self.SECRET_KEY)
+        self._check_default_secret('POSTGRES_PASSWORD', self.POSTGRES_PASSWORD)
+        self._check_default_secret('FIRST_SUPERUSER_PASSWORD', self.FIRST_SUPERUSER_PASSWORD)
         return self
 
 
