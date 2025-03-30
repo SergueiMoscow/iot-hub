@@ -1,10 +1,9 @@
 # backend/app/api/routes/board.py
 import os
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, Form, File
-from sqlmodel import Session, select
+from fastapi import APIRouter, HTTPException, UploadFile, Form
+from sqlmodel import select
 from app.api.deps import SessionDep
 from app.models.device_file_request import DeviceFileRequest
-from app.core.config import settings
 
 router = APIRouter(prefix='/mqtt', tags=['mqtt'])
 
@@ -21,6 +20,8 @@ def save_file_to_disk(topic: str, file: UploadFile) -> str:
         f.write(file.file.read())
     return file_path
 
+
+
 @router.post('/upload-file', dependencies=None)
 async def upload_file(
     session: SessionDep,
@@ -29,7 +30,7 @@ async def upload_file(
     file: UploadFile = Form(...),
 ) -> dict[str, str]:
     '''
-    Принимает файл devices.json от устройства через POST-запрос.
+    Принимает файл devices.json от платы через POST-запрос.
     '''
     # Проверяем secret_key и topic
     statement = select(DeviceFileRequest).where(

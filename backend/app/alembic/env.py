@@ -22,6 +22,8 @@ from sqlmodel import SQLModel  # noqa
 from app.models.user import User, Item
 from app.models.device_data import DeviceData
 from app.models.device_file_request import DeviceFileRequest
+from app.models.board import Board
+from app.models.device_state import DeviceState
 from app.core.config import settings # noqa
 target_metadata = SQLModel.metadata
 
