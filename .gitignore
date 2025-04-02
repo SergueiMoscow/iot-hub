@@ -43,3 +43,4 @@ Thumbs.db  # Windows
 
 readme2.md
 .env.local
+devices/

@@ -1,12 +1,17 @@
 import time
 import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
 
 from app.core.config import settings
 from app.core.setup_logger import setup_logger
 from app.mqtt.mqtt_messages import on_message
-from paho.mqtt import client as mqtt_client
+from paho.mqtt import client as paho_mqtt_client
 from paho.mqtt.enums import CallbackAPIVersion
 
+
+mqtt_client = None
 
 FIRST_RECONNECT_DELAY = 1
 RECONNECT_RATE = 2
@@ -27,7 +32,7 @@ def connect_mqtt():
             elif rc == 4:
                 logger.error("Connection refused - bad credentials.")
 
-    client = mqtt_client.Client(CallbackAPIVersion.VERSION2)
+    client = paho_mqtt_client.Client(CallbackAPIVersion.VERSION2)
     client.username_pw_set(settings.RABBITMQ_USER, settings.RABBITMQ_PASSWORD)
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
@@ -62,7 +67,7 @@ def on_disconnect(client, userdata, rc, properties, *args):
         logger.error(f"Reconnect failed after {reconnect_count} attempts. Exiting...")
 
 
-def subscribe(client: mqtt_client.Client):
+def subscribe(client: paho_mqtt_client.Client):
     # def on_message(client, userdata, msg):
     #     logger.info(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
 
@@ -77,7 +82,15 @@ async def start_mqtt_client():
     return client
 
 
-async def stop_mqtt_client(client: mqtt_client.Client):
+async def stop_mqtt_client(client: paho_mqtt_client.Client):
     client.loop_stop()
     client.disconnect()
     logger.info("MQTT client disconnected.")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global mqtt_client
+    mqtt_client = await start_mqtt_client()
+    yield
+    await stop_mqtt_client(mqtt_client)

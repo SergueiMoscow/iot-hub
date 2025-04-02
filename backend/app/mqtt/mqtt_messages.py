@@ -7,14 +7,14 @@ from sqlmodel import Session
 from app.core.config import settings
 from app.core.setup_logger import setup_logger
 from app.models.device_data import DeviceData
-from paho.mqtt import client as mqtt_client
+from paho.mqtt import client as paho_mqtt_client
 
-from app.models.device_file_request import DeviceFileRequest
+from app.models.controller_file_request import ControllerFileRequest
 from services.utils import is_json
 
 logger = setup_logger(__name__)
 
-def handle_startup(client: mqtt_client.Client, topic: str, payload: str):
+def handle_startup(client: paho_mqtt_client.Client, topic: str, payload: str):
     '''
     Обрабатывает сообщение /startup и отправляет команду на получение файла.
     '''
@@ -46,7 +46,7 @@ def handle_startup(client: mqtt_client.Client, topic: str, payload: str):
 
     with Session(engine) as session:
         try:
-            request = DeviceFileRequest(
+            request = ControllerFileRequest(
                 topic=device_topic,  # Уже без слэша
                 secret_key=secret_key,
                 requested_at=datetime.now(pytz.utc),
@@ -60,7 +60,7 @@ def handle_startup(client: mqtt_client.Client, topic: str, payload: str):
             session.rollback()
 
 
-def handle_gettime(client: mqtt_client.Client, topic: str):
+def handle_gettime(client: paho_mqtt_client.Client, topic: str):
     """
     Отправляет текущее время устройству в ответ на запрос.
     """
@@ -95,7 +95,7 @@ def handle_gettime(client: mqtt_client.Client, topic: str):
     logger.info(f"Sent time data to {response_topic}")
 
 
-def on_message(client: mqtt_client.Client, userdata, msg):
+def on_message(client: paho_mqtt_client.Client, userdata, msg):
     """
     Обрабатывает входящие сообщения.
     """
@@ -115,7 +115,7 @@ def on_message(client: mqtt_client.Client, userdata, msg):
             save_to_db(topic, payload)
 
 
-def subscribe(client: mqtt_client.Client):
+def subscribe(client: paho_mqtt_client.Client):
     """
     Подписывается на топик и настраивает обработчик сообщений.
     """

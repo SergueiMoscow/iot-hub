@@ -7,6 +7,18 @@ resolution-markers = [
 ]
 
 [[package]]
+name = "aiomqtt"
+version = "2.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "paho-mqtt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/70/b9/bfb1dc4b5263fe3f6fe072baaad4646d348cc22f0436f2568f97dd6c7ad6/aiomqtt-2.3.1.tar.gz", hash = "sha256:829d8f8d132ac25212aa6db2ed84182acf774fce0a3469558d0ab13ae2b30cbd", size = 82582 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/54/47/3a47f519de38a8f20626d9e1112bd4692b284c434cbba72cf0a7148a48d1/aiomqtt-2.3.1-py3-none-any.whl", hash = "sha256:4915b548344b689be2d4670324deeb283218b76a30eb993755fcbb3e5d228a0c", size = 15628 },
+]
+
+[[package]]
 name = "alembic"
 version = "1.13.2"
 source = { registry = "https://pypi.org/simple" }
@@ -49,6 +61,7 @@ name = "app"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "aiomqtt" },
     { name = "alembic" },
     { name = "bcrypt" },
     { name = "dotenv" },
@@ -83,6 +96,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiomqtt", specifier = ">=2.3.1" },
     { name = "alembic", specifier = ">=1.12.1,<2.0.0" },
     { name = "bcrypt", specifier = "==4.0.1" },
     { name = "dotenv", specifier = ">=0.9.9" },

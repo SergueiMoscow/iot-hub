@@ -3,7 +3,7 @@ import os
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Form, File
 from sqlmodel import Session, select
 from app.api.deps import SessionDep
-from app.models.device_file_request import DeviceFileRequest
+from app.models.controller_file_request import ControllerFileRequest
 from app.core.config import settings
 
 router = APIRouter(prefix='/mqtt', tags=['mqtt'])
@@ -32,9 +32,9 @@ async def upload_file(
     Принимает файл devices.json от устройства через POST-запрос.
     '''
     # Проверяем secret_key и topic
-    statement = select(DeviceFileRequest).where(
-        DeviceFileRequest.topic == topic,
-        DeviceFileRequest.secret_key == secret_key
+    statement = select(ControllerFileRequest).where(
+        ControllerFileRequest.topic == topic,
+        ControllerFileRequest.secret_key == secret_key
     )
     request = session.exec(statement).first()
 
