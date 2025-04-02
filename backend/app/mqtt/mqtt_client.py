@@ -1,17 +1,16 @@
-import time
 import logging
+import threading
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
+import aiomqtt
+import asyncio
 
 from app.core.config import settings
 from app.core.setup_logger import setup_logger
-from app.mqtt.mqtt_messages import on_message
-from paho.mqtt import client as paho_mqtt_client
-from paho.mqtt.enums import CallbackAPIVersion
-
+from app.mqtt.mqtt_messages import handle_message
 
 mqtt_client = None
+mqtt_thread = None
 
 FIRST_RECONNECT_DELAY = 1
 RECONNECT_RATE = 2
@@ -19,78 +18,80 @@ MAX_RECONNECT_COUNT = 12
 MAX_RECONNECT_DELAY = 60
 logger = setup_logger(__name__)
 
-def connect_mqtt():
-    def on_connect(client, userdata, flags, rc, properties):
-        if rc == 0:
-            logger.info("Connected to MQTT Broker!")
-        else:
-            logger.error(f"Failed to connect, return code {rc}")
-            if rc == 5:
-                logger.error("Authentication error. Check username/password.")
-            elif rc == 1:
-                logger.error("Connection refused - incorrect protocol version.")
-            elif rc == 4:
-                logger.error("Connection refused - bad credentials.")
+async def on_connect(client):
+    logger.info("Connected to MQTT Broker!")
 
-    client = paho_mqtt_client.Client(CallbackAPIVersion.VERSION2)
-    client.username_pw_set(settings.RABBITMQ_USER, settings.RABBITMQ_PASSWORD)
-    client.on_connect = on_connect
-    client.on_disconnect = on_disconnect
-
-    try:
-        client.connect(host=settings.RABBITMQ_HOST, port=int(settings.RABBITMQ_PORT), keepalive=60)
-    except Exception as e:
-        logger.error(f"Connection failed: {e}")
-        raise
-
-    client.loop_start()
-    return client
-
-
-def on_disconnect(client, userdata, rc, properties, *args):
-    logger.info(f"Disconnected with result code: {rc}")
-    # Проверяем, инициировано ли отключение вручную (rc == 0)
-    if rc != 0:  # Если это неявное отключение, пытаемся переподключиться
-        reconnect_count, reconnect_delay = 0, FIRST_RECONNECT_DELAY
-        while reconnect_count < MAX_RECONNECT_COUNT:
-            logger.info(f"Reconnecting in {reconnect_delay} seconds...")
-            time.sleep(reconnect_delay)
-            try:
-                client.reconnect()
+async def on_disconnect(client):
+    logger.info("Disconnected from MQTT Broker!")
+    reconnect_count, reconnect_delay = 0, FIRST_RECONNECT_DELAY
+    while reconnect_count < MAX_RECONNECT_COUNT:
+        logger.info(f"Reconnecting in {reconnect_delay} seconds...")
+        await asyncio.sleep(reconnect_delay)
+        try:
+            async with aiomqtt.Client(
+                hostname=settings.RABBITMQ_HOST,
+                port=int(settings.RABBITMQ_PORT),
+                username=settings.RABBITMQ_USER,
+                password=settings.RABBITMQ_PASSWORD,
+            ) as client:
                 logger.info("Reconnected successfully!")
-                return
-            except Exception as err:
-                logger.error(f"Reconnect failed: {err}")
-            reconnect_delay *= RECONNECT_RATE
-            reconnect_delay = min(reconnect_delay, MAX_RECONNECT_DELAY)
-            reconnect_count += 1
-        logger.error(f"Reconnect failed after {reconnect_count} attempts. Exiting...")
+                return client
+        except Exception as err:
+            logger.error(f"Reconnect failed: {err}")
+        reconnect_delay *= RECONNECT_RATE
+        reconnect_delay = min(reconnect_delay, MAX_RECONNECT_DELAY)
+        reconnect_count += 1
+    logger.error(f"Reconnect failed after {reconnect_count} attempts. Exiting...")
 
+async def connect_mqtt():
+    global mqtt_client
+    async with aiomqtt.Client(
+        hostname=settings.RABBITMQ_HOST,
+        port=int(settings.RABBITMQ_PORT),
+        username=settings.RABBITMQ_USER,
+        password=settings.RABBITMQ_PASSWORD,
+    ) as client:
+        client.on_connect = on_connect
+        client.on_disconnect = on_disconnect
+        mqtt_client = client
+        yield client
 
-def subscribe(client: paho_mqtt_client.Client):
-    # def on_message(client, userdata, msg):
-    #     logger.info(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-
-    client.subscribe(settings.TOPIC)
-    client.on_message = on_message
+async def subscribe(client: aiomqtt.Client):
+    await client.subscribe(settings.TOPIC)
     logger.info(f"Subscribed to topic: {settings.TOPIC}")
 
+async def message_handler(client: aiomqtt.Client):
+    while True:
+        try:
+            async for message in client.messages:
+                await handle_message(client, message)
+                logger.info(f"Received message: {message}")
+        except aiomqtt.MqttError as e:
+            logger.error(f"MQTT error: {e}")
+            await asyncio.sleep(FIRST_RECONNECT_DELAY)
+            await on_disconnect(client)
 
 async def start_mqtt_client():
-    client = connect_mqtt()
-    subscribe(client)
-    return client
+    async for client in connect_mqtt():
+        await subscribe(client)
+        await message_handler(client)
+        logger.info("MQTT client started.")
+        return client
 
+# async def stop_mqtt_client(client: aiomqtt.Client):
+#     await client.disconnect()
+#     logger.info("MQTT client disconnected.")
 
-async def stop_mqtt_client(client: paho_mqtt_client.Client):
-    client.loop_stop()
-    client.disconnect()
-    logger.info("MQTT client disconnected.")
-
+def run_mqtt_client():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(start_mqtt_client())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global mqtt_client
-    mqtt_client = await start_mqtt_client()
+    global mqtt_thread
+    mqtt_thread = threading.Thread(target=run_mqtt_client)
+    mqtt_thread.start()
     yield
-    await stop_mqtt_client(mqtt_client)
+    # await stop_mqtt_client(mqtt_client)
+    mqtt_thread.join()

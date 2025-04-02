@@ -7,14 +7,13 @@ from sqlmodel import Session
 from app.core.config import settings
 from app.core.setup_logger import setup_logger
 from app.models.device_data import DeviceData
-from paho.mqtt import client as paho_mqtt_client
-
 from app.models.controller_file_request import ControllerFileRequest
 from services.utils import is_json
+import aiomqtt
 
 logger = setup_logger(__name__)
 
-def handle_startup(client: paho_mqtt_client.Client, topic: str, payload: str):
+async def handle_startup(client: aiomqtt.Client, topic: str, payload: str):
     '''
     Обрабатывает сообщение /startup и отправляет команду на получение файла.
     '''
@@ -41,7 +40,7 @@ def handle_startup(client: paho_mqtt_client.Client, topic: str, payload: str):
         'secret_key': secret_key,
     }
 
-    client.publish(send_file_topic, json.dumps(send_file_message))
+    await client.publish(send_file_topic, json.dumps(send_file_message))
     logger.info(f'Sent sendFile command to {send_file_topic}')
 
     with Session(engine) as session:
@@ -59,8 +58,7 @@ def handle_startup(client: paho_mqtt_client.Client, topic: str, payload: str):
             logger.error(f'Failed to save file request: {e}')
             session.rollback()
 
-
-def handle_gettime(client: paho_mqtt_client.Client, topic: str):
+async def handle_gettime(client: aiomqtt.Client, topic: str):
     """
     Отправляет текущее время устройству в ответ на запрос.
     """
@@ -91,38 +89,27 @@ def handle_gettime(client: paho_mqtt_client.Client, topic: str):
     }
 
     # Отправляем ответ устройству
-    client.publish(response_topic, json.dumps(time_data))
+    await client.publish(response_topic, json.dumps(time_data))
     logger.info(f"Sent time data to {response_topic}")
 
-
-def on_message(client: paho_mqtt_client.Client, userdata, msg):
+async def handle_message(client: aiomqtt.Client, message):
     """
     Обрабатывает входящие сообщения.
     """
-    topic = msg.topic
-    payload = msg.payload.decode()
+    topic = str(message.topic)
+    payload = message.payload.decode()
 
     # Если запрос на получение времени
     if topic.endswith("/gettime"):
-        handle_gettime(client, topic)
+        await handle_gettime(client, topic)
     elif topic.endswith("/startup"):
         logger.info(f"Received `{payload}` from `{topic}` topic")
-        handle_startup(client, topic, payload)
+        await handle_startup(client, topic, payload)
     else:
         # Логируем и сохраняем сообщение в базу данных
         logger.info(f"Received `{payload}` from `{topic}` topic")
         if is_json(payload):
             save_to_db(topic, payload)
-
-
-def subscribe(client: paho_mqtt_client.Client):
-    """
-    Подписывается на топик и настраивает обработчик сообщений.
-    """
-    client.subscribe(settings.TOPIC)
-    client.on_message = on_message
-    logger.info(f"Subscribed to topic: {settings.TOPIC}")
-
 
 def save_to_db(topic: str, payload: str):
     """
