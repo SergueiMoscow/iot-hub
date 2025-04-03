@@ -3,8 +3,11 @@ import os
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Form, File
 from sqlmodel import Session, select
 from app.api.deps import SessionDep
+from app.core.db import engine
+from app.models.controller_board import ControllerBoard, create_or_update_controller_board
 from app.models.controller_file_request import ControllerFileRequest
 from app.core.config import settings
+from app.services.get_active_mqtt_config import get_active_mqtt_config
 
 router = APIRouter(prefix='/mqtt', tags=['mqtt'])
 
@@ -21,6 +24,7 @@ def save_file_to_disk(topic: str, file: UploadFile) -> str:
         f.write(file.file.read())
     return file_path
 
+
 @router.post('/upload-file', dependencies=None)
 async def upload_file(
     session: SessionDep,
@@ -29,7 +33,7 @@ async def upload_file(
     file: UploadFile = Form(...),
 ) -> dict[str, str]:
     '''
-    Принимает файл devices.json от устройства через POST-запрос.
+    Принимает файл от устройства через POST-запрос.
     '''
     # Проверяем secret_key и topic
     statement = select(ControllerFileRequest).where(
@@ -46,4 +50,14 @@ async def upload_file(
         raise HTTPException(status_code=400, detail='File does not match requested filename')
 
     file_path = save_file_to_disk(topic, file)
+
+    if file.filename == 'mqtt.json':
+        mqtt_config = get_active_mqtt_config(file_path)
+        with Session(engine) as session:
+            await create_or_update_controller_board(
+                session=session,
+                topic=topic,
+                rabbitmq_user=mqtt_config['User'],
+                period=mqtt_config['Period'],
+            )
     return {'message': f'File saved to {file_path}'}
