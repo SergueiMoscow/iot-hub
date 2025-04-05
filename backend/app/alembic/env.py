@@ -19,7 +19,8 @@ fileConfig(config.config_file_name)
 # target_metadata = None
 
 from sqlmodel import SQLModel  # noqa
-from app.models.user import User, Item
+from app.models.user import User
+from app.models.item import Item
 from app.models.controller_file_request import ControllerFileRequest
 from app.models.controller_board import ControllerBoard
 from app.models.device_data import DeviceData

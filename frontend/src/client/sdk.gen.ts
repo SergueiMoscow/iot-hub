@@ -4,6 +4,10 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
+  ControllerBoardsGetBoardsData,
+  ControllerBoardsGetBoardsResponse,
+  ControllerBoardsToggleRelayData,
+  ControllerBoardsToggleRelayResponse,
   ItemsReadItemsData,
   ItemsReadItemsResponse,
   ItemsCreateItemData,
@@ -23,6 +27,10 @@ import type {
   LoginResetPasswordResponse,
   LoginRecoverPasswordHtmlContentData,
   LoginRecoverPasswordHtmlContentResponse,
+  MqttUploadFileData,
+  MqttUploadFileResponse,
+  PrivateCreateUserData,
+  PrivateCreateUserResponse,
   UsersReadUsersData,
   UsersReadUsersResponse,
   UsersCreateUserData,
@@ -45,6 +53,60 @@ import type {
   UtilsTestEmailResponse,
   UtilsHealthCheckResponse,
 } from "./types.gen"
+
+export class ControllerBoardsService {
+  /**
+   * Get Boards
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @returns ControllerBoardPublic Successful Response
+   * @throws ApiError
+   */
+  public static getBoards(
+    data: ControllerBoardsGetBoardsData = {},
+  ): CancelablePromise<ControllerBoardsGetBoardsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/boards",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Toggle Relay
+   * @param data The data for the request.
+   * @param data.topic
+   * @param data.name
+   * @param data.state
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static toggleRelay(
+    data: ControllerBoardsToggleRelayData,
+  ): CancelablePromise<ControllerBoardsToggleRelayResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/boards/{topic}/relay/{name}",
+      path: {
+        topic: data.topic,
+        name: data.name,
+      },
+      query: {
+        state: data.state,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
 
 export class ItemsService {
   /**
@@ -265,6 +327,54 @@ export class LoginService {
       path: {
         email: data.email,
       },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class MqttService {
+  /**
+   * Upload File
+   * Принимает файл от устройства через POST-запрос.
+   * @param data The data for the request.
+   * @param data.formData
+   * @returns string Successful Response
+   * @throws ApiError
+   */
+  public static uploadFile(
+    data: MqttUploadFileData,
+  ): CancelablePromise<MqttUploadFileResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/mqtt/upload-file",
+      formData: data.formData,
+      mediaType: "application/x-www-form-urlencoded",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class PrivateService {
+  /**
+   * Create User
+   * Create a new user.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns UserPublic Successful Response
+   * @throws ApiError
+   */
+  public static createUser(
+    data: PrivateCreateUserData,
+  ): CancelablePromise<PrivateCreateUserResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/private/users/",
+      body: data.requestBody,
+      mediaType: "application/json",
       errors: {
         422: "Validation Error",
       },

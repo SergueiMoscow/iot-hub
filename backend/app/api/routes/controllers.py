@@ -5,11 +5,11 @@ from fastapi import APIRouter, Depends
 from sqlmodel import func, select
 
 from app.api.deps import get_current_user, SessionDep, MqttClientDep, CurrentUser
-from app.models.controller_board import ControllerBoard, ControllerBoardPublic
+from app.models.controller_board import ControllerBoard, ControllerBoardPublic, ControllerBoardsPublic
 
-router = APIRouter(tags=['dashboard'])
+router = APIRouter(tags=['ControllerBoards'])
 
-@router.get('/boards', dependencies=[Depends(get_current_user)], response_model=ControllerBoardPublic)
+@router.get('/boards', dependencies=[Depends(get_current_user)], response_model=ControllerBoardsPublic)
 async def get_boards(session: SessionDep, current_user: CurrentUser, skip: int = 0, limit: int = 100) -> Any:
     if current_user.is_superuser:
         count_statement = select(func.count()).select_from(ControllerBoard)
@@ -20,18 +20,18 @@ async def get_boards(session: SessionDep, current_user: CurrentUser, skip: int =
         count_statement = (
             select(func.count())
             .select_from(ControllerBoard)
-            .where(ControllerBoard.owner_id == current_user.id)
+            # .where(ControllerBoard.owner_id == current_user.id)
         )
         count = session.exec(count_statement).one()
         statement = (
             select(ControllerBoard)
-            .where(ControllerBoard.owner_id == current_user.id)
+            # .where(ControllerBoard.owner_id == current_user.id)
             .offset(skip)
             .limit(limit)
         )
         items = session.exec(statement).all()
 
-    return ControllerBoardPublic(data=items, count=count)
+    return ControllerBoardsPublic(data=items, count=count)
 
 
 @router.post('/boards/{topic}/relay/{name}')

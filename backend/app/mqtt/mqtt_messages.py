@@ -2,7 +2,7 @@ import json
 import secrets
 from datetime import datetime
 import pytz
-from app.core.db import engine
+from app.core.db import engine, AsyncSession
 from sqlmodel import Session
 from app.core.config import settings
 from app.core.setup_logger import setup_logger

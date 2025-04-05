@@ -26,6 +26,7 @@ dependencies = [
     "paho-mqtt>=2.1.0",
     "pytz>=2025.2",
     "aiomqtt>=2.3.1",
+    "asyncpg>=0.30.0",
 ]
 
 [tool.uv]

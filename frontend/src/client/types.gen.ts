@@ -9,6 +9,25 @@ export type Body_login_login_access_token = {
   client_secret?: string | null
 }
 
+export type Body_mqtt_upload_file = {
+  topic: string
+  secret_key: string
+  file: Blob | File
+}
+
+export type ControllerBoardPublic = {
+  topic: string
+  ip: string
+  rabbitmq_user: string
+  last_seen?: string
+  period?: number
+  description?: string
+  access_key?: string
+  created_at: string
+  updated_at: string
+  id: number
+}
+
 export type HTTPValidationError = {
   detail?: Array<ValidationError>
 }
@@ -42,6 +61,13 @@ export type Message = {
 export type NewPassword = {
   token: string
   new_password: string
+}
+
+export type PrivateUserCreate = {
+  email: string
+  password: string
+  full_name: string
+  is_verified?: boolean
 }
 
 export type Token = {
@@ -100,6 +126,21 @@ export type ValidationError = {
   type: string
 }
 
+export type ControllerBoardsGetBoardsData = {
+  limit?: number
+  skip?: number
+}
+
+export type ControllerBoardsGetBoardsResponse = ControllerBoardPublic
+
+export type ControllerBoardsToggleRelayData = {
+  name: string
+  state: string
+  topic: string
+}
+
+export type ControllerBoardsToggleRelayResponse = unknown
+
 export type ItemsReadItemsData = {
   limit?: number
   skip?: number
@@ -157,6 +198,20 @@ export type LoginRecoverPasswordHtmlContentData = {
 }
 
 export type LoginRecoverPasswordHtmlContentResponse = string
+
+export type MqttUploadFileData = {
+  formData: Body_mqtt_upload_file
+}
+
+export type MqttUploadFileResponse = {
+  [key: string]: string
+}
+
+export type PrivateCreateUserData = {
+  requestBody: PrivateUserCreate
+}
+
+export type PrivateCreateUserResponse = UserPublic
 
 export type UsersReadUsersData = {
   limit?: number

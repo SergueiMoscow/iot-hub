@@ -1,11 +1,9 @@
 import logging
-import uuid
 from datetime import datetime
-
 from sqlalchemy import select
 from sqlmodel import Field, SQLModel, Relationship, Column, DateTime, func, Session
-from app.models.user import User
 from sqlalchemy.exc import IntegrityError
+from typing import Optional, List
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,6 +17,9 @@ class ControllerBoardBase(SQLModel):
     period: int = Field(default=60, nullable=False)
     description: str = Field(max_length=255, nullable=True, default='')
     access_key: str = Field(max_length=32, nullable=False, default='')
+
+class ControllerBoard(ControllerBoardBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
     created_at: datetime =(
         Field(
             sa_column=Column(
@@ -37,16 +38,17 @@ class ControllerBoardBase(SQLModel):
             nullable=False
         )
     )
+    devices: List["Device"] = Relationship(back_populates="controller")
 
-class ControllerBoard(ControllerBoardBase, table=True):
-    id: int = Field(primary_key=True, index=True)
-    # owner_id: uuid.UUID = Field(
-    #     foreign_key="user.id", nullable=False, ondelete="CASCADE"
-    # )
-    # owner: User | None = Relationship(back_populates="boards")
 
 class ControllerBoardPublic(ControllerBoardBase):
     id: int
+    created_at: datetime
+    updated_at: datetime
+
+class ControllerBoardsPublic(SQLModel):
+    data: list[ControllerBoardPublic]
+    count: int
 
 
 # @event.listens_for(Session, 'before_commit')
