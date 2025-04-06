@@ -128,9 +128,9 @@ async def handle_message(client: aiomqtt.Client, message):
         await handle_startup(client, topic, payload)
     else:
         # Логируем и сохраняем сообщение в базу данных
-        logger.info(f"Received `{payload}` from `{topic}` topic")
         if is_json(payload):
             # save_to_db(topic, payload)
+            logger.info(f"Received `{payload}` from `{topic}` topic")
             process_state_message(payload=payload, topic=topic)
 
 

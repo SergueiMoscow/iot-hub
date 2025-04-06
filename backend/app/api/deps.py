@@ -1,6 +1,7 @@
-from collections.abc import Generator
+from collections.abc import Generator, AsyncGenerator
 from typing import Annotated
 
+import aiomqtt
 import jwt
 import paho
 from fastapi import Depends, HTTPException, status, FastAPI
@@ -12,10 +13,12 @@ from sqlmodel import Session
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
+from app.core.setup_logger import setup_logger
 from app.models.user import TokenPayload, User
-from paho.mqtt import client as paho_mqtt_client
+from app.mqtt.mqtt_client import MQTTClientManager
 
-from app.mqtt.mqtt_client import mqtt_client
+
+logger = setup_logger(__name__)
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
@@ -61,9 +64,19 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
     return current_user
 
 
-def get_mqtt_client() -> paho_mqtt_client.Client:
-    if paho_mqtt_client is None:
+async def get_mqtt_client() -> AsyncGenerator[aiomqtt.Client, None]:
+    manager = MQTTClientManager()
+    if not manager.client:
         raise RuntimeError("MQTT client is not initialized")
-    return mqtt_client
 
-MqttClientDep = Annotated[mqtt_client, Depends(get_mqtt_client)]
+    try:
+        yield manager.client
+    except Exception as e:
+        logger.error(f"MQTT client error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="MQTT service unavailable"
+        )
+
+
+MqttClientDep = Annotated[aiomqtt.Client, Depends(get_mqtt_client)]

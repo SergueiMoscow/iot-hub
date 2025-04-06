@@ -1,6 +1,7 @@
-from sqlmodel import Session, create_engine, select, SQLModel
-from sqlalchemy.ext.asyncio import AsyncSession as AsyncSessionSQLAlchemy, create_async_engine, async_sessionmaker
-import sys
+from sqlmodel import Session, create_engine, select
+from sqlmodel.ext.asyncio.session import AsyncSession as AsyncSessionSQLModel
+from sqlalchemy.ext.asyncio import create_async_engine
+
 from app import crud
 from app.core.config import settings
 from app.models.user import User, UserCreate
@@ -16,11 +17,7 @@ async_engine = create_async_engine(
 )
 
 # Создаем фабрику сессий
-AsyncSession = async_sessionmaker(
-    async_engine,
-    expire_on_commit=False,
-    class_=AsyncSessionSQLAlchemy
-)
+AsyncSession = AsyncSessionSQLModel(async_engine)
 
 def init_db(session: Session) -> None:
     user = session.exec(

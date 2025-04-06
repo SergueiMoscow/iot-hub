@@ -1,6 +1,5 @@
 import sentry_sdk
 import uvicorn
-# from app.mqtt.lifespan import lifespan
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
