@@ -20,16 +20,6 @@ class DeviceBase(SQLModel):
             raise ValueError(f"Device type must be one of {allowed_types}")
         return v
 
-class DeviceCreate(DeviceBase):
-    controller_id: int
-
-
-class DeviceUpdate(SQLModel):
-    name: Optional[str] = Field(default=None, max_length=255)
-    type: Optional[str] = Field(default=None, max_length=50)
-    pin: Optional[str] = Field(default=None, max_length=10)
-    description: Optional[str] = Field(default=None)
-
 
 class Device(DeviceBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -39,6 +29,17 @@ class Device(DeviceBase, table=True):
     triggers: List["Trigger"] = Relationship(back_populates="device")
     controller: Optional["ControllerBoard"] = Relationship(back_populates="devices")
     history: List["DeviceHistory"] = Relationship(back_populates="device")
+
+
+class DeviceCreate(DeviceBase):
+    controller_id: int
+
+
+class DeviceUpdate(SQLModel):
+    name: Optional[str] = Field(default=None, max_length=255)
+    type: Optional[str] = Field(default=None, max_length=50)
+    pin: Optional[str] = Field(default=None, max_length=10)
+    description: Optional[str] = Field(default=None)
 
 
 class DevicePublic(DeviceBase):

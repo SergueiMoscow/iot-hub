@@ -3,14 +3,19 @@ import logging
 import pytz
 from datetime import datetime
 
-from sqlmodel import Session, select, and_
+from sqlmodel import Session, select
 
-from app.core.db import engine
-from app.models import DeviceState, ControllerBoard
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.core.db import async_engine
+from app.models import DeviceState
 from app.models.device import Device, DeviceCreate
 from app.models.device_history import DeviceHistory
 from app.models.trigger import Trigger
-
+from app.repositories.controller_board_repository import get_controller_by_topic
+from app.repositories.device_repository import get_device_by_name_and_controller_id
+from app.repositories.device_state_repository import get_or_create_device_state_by_device_id, \
+    update_or_create_device_state_by_device_id
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -99,25 +104,28 @@ def process_startup_message(session: Session, devices: dict, controller_id: int)
                 )
                 session.add(trigger)
 
-def process_state_message(payload: dict, topic: str):
-    with Session(engine) as session:
-        controller = session.exec(
-            select(ControllerBoard).filter_by(topic=topic)
-        ).first()
+async def process_state_message(payload: dict, topic: str):
+    async with AsyncSession(async_engine) as session:
+    # with Session(engine) as session:
+        controller = await get_controller_by_topic(session=session, topic=topic)
         if not controller:
             logger.error(f"Controller with topic {topic} not found")
             return
 
         for device_name, state in payload.items():
-            device = session.exec(select(Device).filter_by(name=device_name, controller_id=controller.id)).first()
+            device = await get_device_by_name_and_controller_id(session=session, device_name=device_name, controller_id=controller.id)
             if not device:
                 logger.error(f"Device {device_name} not found for controller {controller.id}")
                 continue
 
+            value = json.dumps(state)
             # Update DeviceState
-            device_state = DeviceState(device_id=device.id, value=json.dumps(state))
-            session.add(device_state)
-
+            device_state = await update_or_create_device_state_by_device_id(
+                session=session,
+                device_id=device.id,
+                value=state,
+            )
+            return
             # Update DeviceHistory
             device_history = session.exec(select(DeviceHistory).filter_by(device_id=device.id)).first()
             if not device_history:

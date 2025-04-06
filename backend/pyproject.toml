@@ -27,6 +27,8 @@ dependencies = [
     "pytz>=2025.2",
     "aiomqtt>=2.3.1",
     "asyncpg>=0.30.0",
+    "pytest-asyncio>=0.23.8",
+    "pytest>=7.4.4",
 ]
 
 [tool.uv]

@@ -5,7 +5,7 @@ from datetime import datetime
 
 class DeviceStateBase(SQLModel):
     value: str
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    last_updated: datetime = Field(default_factory=datetime.now)
 
 class DeviceStateCreate(DeviceStateBase):
     device_id: int

@@ -8,6 +8,8 @@ from sqlmodel import Session, delete
 from app.core.config import settings
 from app.core.db import engine, init_db
 from app.main import app
+from app.models import ControllerBoard, Device
+from app.models.device_state import DeviceStateCreate, DeviceState
 from app.models.user import User
 from app.models.item import Item
 from app.tests.utils.user import authentication_token_from_email
@@ -56,11 +58,11 @@ def db(apply_migrations):
     with Session(engine) as session:
         init_db(session)
         yield session
-    statement = delete(Item)
-    session.execute(statement)
-    statement = delete(User)
-    session.execute(statement)
-    session.commit()
+    # statement = delete(Item)
+    # session.execute(statement)
+    # statement = delete(User)
+    # session.execute(statement)
+    # session.commit()
 
 
 @pytest.fixture(scope="module")
@@ -79,3 +81,48 @@ def normal_user_token_headers(client: TestClient, db: Session) -> dict[str, str]
     return authentication_token_from_email(
         client=client, email=settings.EMAIL_TEST_USER, db=db
     )
+
+@pytest.fixture(scope="module")
+def created_controller_board():
+    controller_board = ControllerBoard(
+        topic='test1/test2/test3',
+        ip='111.11.11.11',
+        rabbitmq_user='test1',
+        period=20,
+    )
+    with Session(engine) as session:
+        session.add(controller_board)
+        session.commit()
+        session.refresh(controller_board)
+    return controller_board
+
+
+@pytest.fixture(scope='module')
+def created_device(created_controller_board):
+    controller_board_id = created_controller_board.id
+    device = Device(
+        name='test_device',
+        type='Relay',
+        pin='D1',
+        description='test description',
+        device_key='device1',
+        controller_id=controller_board_id
+    )
+    with Session(engine) as session:
+        session.add(device)
+        session.commit()
+        session.refresh(device)
+    return device
+
+
+@pytest.fixture(scope='module')
+def created_device_state(created_device):
+    device_state = DeviceState(
+        device_id=created_device.id,
+        value='10',
+    )
+    with Session(engine) as session:
+        session.add(device_state)
+        session.commit()
+        session.refresh(device_state)
+    return device_state

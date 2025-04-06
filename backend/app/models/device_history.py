@@ -6,11 +6,10 @@ class DeviceHistoryBase(SQLModel):
     device_id: int = Field(foreign_key="device.id", primary_key=True)
     min_value: Optional[float] = None
     max_value: Optional[float] = None
-    relay_on_count: Optional[int] = 0
-    relay_off_count: Optional[int] = 0
-    rfid_success_count: Optional[int] = 0
-    rfid_fail_count: Optional[int] = 0
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    value: Optional[str] = None
+    status: Optional[str] = None
+    hour: datetime = Field(default_factory=datetime.now, nullable=False)
+    last_updated: datetime = Field(default_factory=datetime.now, nullable=False)
 
 class DeviceHistory(DeviceHistoryBase, table=True):
     device: Optional["Device"] = Relationship(back_populates="history")

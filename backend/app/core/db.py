@@ -1,4 +1,4 @@
-from sqlmodel import Session, create_engine, select
+from sqlmodel import Session, create_engine, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession as AsyncSessionSQLModel
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -10,14 +10,27 @@ from app.models.user import User, UserCreate
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
 # Асинхронный движок
-async_engine = create_async_engine(
-    str(settings.SQLALCHEMY_DATABASE_URI).replace("postgresql+psycopg", "postgresql+asyncpg"),
-    echo=True,
-    future=True
-)
+print("URI:" + str(settings.SQLALCHEMY_DATABASE_URI).replace("postgresql+psycopg", "postgresql+asyncpg"))
+def get_async_engine():
+    uri = str(settings.SQLALCHEMY_DATABASE_URI).replace("postgresql+psycopg", "postgresql+asyncpg")
+    if 'options' in uri:
+        uri = uri.split('?')[0]
+    async_engine = create_async_engine(
+        uri,
+        echo=True,
+        future=True
+    )
+    return async_engine
 
-# Создаем фабрику сессий
-AsyncSession = AsyncSessionSQLModel(async_engine)
+async_engine = get_async_engine()
+
+class AsyncSession(AsyncSessionSQLModel):
+    async def __aenter__(self):
+        await super().__aenter__()
+        await self.exec(text(f'SET search_path TO {settings.POSTGRES_SCHEMA}'))
+        await self.commit()
+        return self
+
 
 def init_db(session: Session) -> None:
     user = session.exec(

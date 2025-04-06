@@ -3,6 +3,7 @@ import secrets
 import sys
 import warnings
 import uuid
+import pytz
 from pathlib import Path
 from typing import Annotated, Any, Literal, ClassVar
 from dotenv import load_dotenv
@@ -113,6 +114,12 @@ class Settings(BaseSettings):
     EMAIL_TEST_USER: EmailStr = 'test@example.com'
     FIRST_SUPERUSER: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
+    TIME_ZONE: str = 'Europe/Moscow'
+
+    @computed_field
+    @property
+    def local_tz(self) -> pytz.timezone:
+        return pytz.timezone(self.TIME_ZONE)
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == 'changethis':

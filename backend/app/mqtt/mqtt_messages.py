@@ -9,7 +9,7 @@ from app.core.setup_logger import setup_logger
 from app.models.controller_board import create_or_update_controller_board
 from app.models.controller_file_request import ControllerFileRequest
 from app.services.process_messages import process_state_message
-from app.services.utils import is_json
+from app.services.utils import is_json, get_root_topic
 import aiomqtt
 
 logger = setup_logger(__name__)
@@ -130,8 +130,10 @@ async def handle_message(client: aiomqtt.Client, message):
         # Логируем и сохраняем сообщение в базу данных
         if is_json(payload):
             # save_to_db(topic, payload)
+            root_topic = get_root_topic(topic)
+            payload_dict = json.loads(payload)
             logger.info(f"Received `{payload}` from `{topic}` topic")
-            process_state_message(payload=payload, topic=topic)
+            await process_state_message(payload=payload_dict, topic=root_topic)
 
 
 # def save_to_db(topic: str, payload: str):
