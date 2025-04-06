@@ -10,11 +10,12 @@ class DeviceBase(SQLModel):
     type: str = Field(max_length=50)
     pin: Optional[str] = Field(max_length=10, default=None)
     description: Optional[str] = Field(default=None)
+    device_key: str
 
     @field_validator('type')
     @classmethod
     def validate_type(cls, v: str) -> str:
-        allowed_types = {'Sensor', 'Relay'}
+        allowed_types = {'Relay', 'Buzzer', 'RFID', 'DS18B20', 'DHT', 'MQ'}
         if v not in allowed_types:
             raise ValueError(f"Device type must be one of {allowed_types}")
         return v
@@ -36,7 +37,8 @@ class Device(DeviceBase, table=True):
 
     states: Optional["DeviceState"] = Relationship(back_populates="device")
     triggers: List["Trigger"] = Relationship(back_populates="device")
-    controller: Optional["ControllerBoard"] = Relationship(back_populates="devices")  # Обратите внимание на кавычки
+    controller: Optional["ControllerBoard"] = Relationship(back_populates="devices")
+    history: List["DeviceHistory"] = Relationship(back_populates="device")
 
 
 class DevicePublic(DeviceBase):

@@ -47,3 +47,6 @@ async def async_init_db(session: AsyncSession) -> None:
                 is_superuser=True,
             )
             user = await crud.async_create_user(session=session, user_create=user_in)
+
+if __name__ == "__main__":
+    init_db(Session(engine))

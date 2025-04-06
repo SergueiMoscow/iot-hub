@@ -1,13 +1,14 @@
 # backend/app/api/routes/board.py
+import json
 import os
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, Form, File
+from fastapi import APIRouter, HTTPException, UploadFile, Form
 from sqlmodel import Session, select
 from app.api.deps import SessionDep
 from app.core.db import engine
 from app.models.controller_board import ControllerBoard, create_or_update_controller_board
 from app.models.controller_file_request import ControllerFileRequest
-from app.core.config import settings
 from app.services.get_active_mqtt_config import get_active_mqtt_config
+from app.services.process_messages import process_startup_message
 
 router = APIRouter(prefix='/mqtt', tags=['mqtt'])
 
@@ -40,13 +41,16 @@ async def upload_file(
         ControllerFileRequest.topic == topic,
         ControllerFileRequest.secret_key == secret_key
     )
-    request = session.exec(statement).first()
+    controller_file_request = session.exec(statement).first()
 
-    if not request:
+    statement = select(ControllerBoard).where(ControllerBoard.topic == topic)
+    controller_board = session.exec(statement).first()
+
+    if not controller_file_request:
         raise HTTPException(status_code=403, detail='Invalid topic or secret_key')
 
     # Проверяем, что загруженный файл соответствует запрошенному
-    if file.filename != request.filename:
+    if file.filename != controller_file_request.filename:
         raise HTTPException(status_code=400, detail='File does not match requested filename')
 
     file_path = save_file_to_disk(topic, file)
@@ -60,4 +64,8 @@ async def upload_file(
                 rabbitmq_user=mqtt_config['User'],
                 period=mqtt_config['Period'],
             )
+    elif file.filename == 'devices.json':
+        with open(file_path, 'r') as f:
+            devices_json = json.load(f)
+        process_startup_message(session=session, devices=devices_json, controller_id=controller_board.id)
     return {'message': f'File saved to {file_path}'}

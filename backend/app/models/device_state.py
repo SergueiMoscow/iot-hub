@@ -1,9 +1,6 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
 from datetime import datetime
-from pydantic import validator
-
-# from app.models.device import Device
 
 
 class DeviceStateBase(SQLModel):
@@ -31,7 +28,7 @@ class DeviceStatePublic(SQLModel):
     last_updated: datetime
 
     @classmethod
-    def from_orm(cls, db_state: DeviceState):
+    def from_db_state(cls, db_state: DeviceState):
         return cls(
             topic=db_state.device.controller.topic,
             controller_description=db_state.device.controller.description,

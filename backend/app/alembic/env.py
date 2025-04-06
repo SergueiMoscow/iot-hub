@@ -24,6 +24,9 @@ from app.models.item import Item
 from app.models.controller_file_request import ControllerFileRequest
 from app.models.controller_board import ControllerBoard
 from app.models.device_data import DeviceData
+from app.models.device_state import DeviceState
+from app.models.device_history import DeviceHistory
+from app.models.device import Device
 from app.core.config import settings # noqa
 target_metadata = SQLModel.metadata
 

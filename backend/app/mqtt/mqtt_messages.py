@@ -2,14 +2,14 @@ import json
 import secrets
 from datetime import datetime
 import pytz
-from app.core.db import engine, AsyncSession
+from app.core.db import engine
 from sqlmodel import Session
 from app.core.config import settings
 from app.core.setup_logger import setup_logger
 from app.models.controller_board import create_or_update_controller_board
-from app.models.device_data import DeviceData
 from app.models.controller_file_request import ControllerFileRequest
-from services.utils import is_json
+from app.services.process_messages import process_state_message
+from app.services.utils import is_json
 import aiomqtt
 
 logger = setup_logger(__name__)
@@ -130,43 +130,44 @@ async def handle_message(client: aiomqtt.Client, message):
         # Логируем и сохраняем сообщение в базу данных
         logger.info(f"Received `{payload}` from `{topic}` topic")
         if is_json(payload):
-            save_to_db(topic, payload)
+            # save_to_db(topic, payload)
+            process_state_message(payload=payload, topic=topic)
 
 
-def save_to_db(topic: str, payload: str):
-    """
-    Сохраняет сообщение в базу данных.
-    """
-    parts = topic.split("/")
-    if len(parts) < 4:
-        logger.error(f"Invalid topic format: {topic}")
-        return
-
-    object_, room, device, state, *module = parts
-    module = "/".join(module) if module else ""
-    try:
-        payload_dict = json.loads(payload)
-        value = json.dumps(payload_dict)  # Сохраняем весь JSON как строку
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to decode payload: {e}")
-        return
-    message = DeviceData(
-        object=object_,
-        room=room,
-        device=device,
-        state=state,
-        module=module,
-        value=value,
-        timestamp=datetime.now()
-    )
-    with Session(engine) as session:
-        try:
-            session.add(message)
-            session.commit()
-            session.refresh(message)
-            logger.info(f"Saved message to DB: {message.id}")
-        except Exception as e:
-            logger.error(f"Failed to save message to DB: {e}")
-            session.rollback()
-        finally:
-            session.close()
+# def save_to_db(topic: str, payload: str):
+#     """
+#     Сохраняет сообщение в базу данных.
+#     """
+#     parts = topic.split("/")
+#     if len(parts) < 4:
+#         logger.error(f"Invalid topic format: {topic}")
+#         return
+#
+#     object_, room, device, state, *module = parts
+#     module = "/".join(module) if module else ""
+#     try:
+#         payload_dict = json.loads(payload)
+#         value = json.dumps(payload_dict)  # Сохраняем весь JSON как строку
+#     except json.JSONDecodeError as e:
+#         logger.error(f"Failed to decode payload: {e}")
+#         return
+#     message = DeviceData(
+#         object=object_,
+#         room=room,
+#         device=device,
+#         state=state,
+#         module=module,
+#         value=value,
+#         timestamp=datetime.now()
+#     )
+#     with Session(engine) as session:
+#         try:
+#             session.add(message)
+#             session.commit()
+#             session.refresh(message)
+#             logger.info(f"Saved message to DB: {message.id}")
+#         except Exception as e:
+#             logger.error(f"Failed to save message to DB: {e}")
+#             session.rollback()
+#         finally:
+#             session.close()
