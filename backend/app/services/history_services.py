@@ -46,7 +46,30 @@ def get_current_hour(
     return current_time.replace(minute=0, second=0, microsecond=0)
 
 
-async def save_to_history(session: AsyncSession, device: Device):
+async def save_to_history(
+    session: AsyncSession,
+    device: Device,
+    data: dict,
+):
     """
+    Получаем Весь payload. Фильтруем его здесь.
     {"Bedroom":"on","Passage":"on","FloorSensors":{"Bedroom":26.5625,"Passage":26.5625},"RoomClimate":{"temperature":27.10000038,"humidity":37.79999924},"GasSensor":{"gas_raw":58,"gas_ppm":6.718621254},"time":1743968248}
     """
+    # if device.type == 'Relay':
+    #     value = data[device.name]
+    # elif device.type == 'DS18B20':
+    #     for sensor in data[device.name]:
+    #     value = data[device.name]['temperature']
+    # elif device.type == 'DHT22':
+    #     value = data[device.name]['temperature']
+    # else:
+    #     return
+    #
+    # hour = get_current_hour()
+    # await session.exec(
+    #     insert(DeviceHistory).values(
+    #         device_id=device.id,
+    #         value=value,
+    #         hour=hour,
+    #     )
+    # )

@@ -5,8 +5,8 @@ import pytz
 from app.core.config import settings
 from app.services.history_services import get_current_hour
 
-TEST_UNIX_TIME = 1743968248  # 2025-04-06 19:37:28 UTC → 22:37:28 MSK (UTC+3)
-EXPECTED_TRUNCATED = datetime(2025, 4, 6, 22, 0, 0)  # Ожидаемый результат после обнуления
+TEST_UNIX_TIME = datetime.now(timezone.utc).timestamp()  # 1743968248  # 2025-04-06 19:37:28 UTC → 22:37:28 MSK (UTC+3)
+EXPECTED_TRUNCATED = datetime(datetime.now().year, datetime.now().month, datetime.now().day, datetime.now().hour, 0, 0)  # Ожидаемый результат после обнуления
 
 
 @pytest.mark.parametrize("input_time, expected_hour", [
@@ -15,14 +15,14 @@ EXPECTED_TRUNCATED = datetime(2025, 4, 6, 22, 0, 0)  # Ожидаемый рез
 
     # Наивный datetime (без временной зоны)
     (
-            datetime(2025, 4, 6, 22, 37, 28),
-            datetime(2025, 4, 6, 22, 0, 0)
+            datetime(datetime.now().year, datetime.now().month, datetime.now().day, datetime.now().hour, datetime.now().minute, datetime.now().second),
+            datetime(datetime.now().year, datetime.now().month, datetime.now().day, datetime.now().hour, 0, 0)
     ),
 
     # datetime с временной зоной (UTC)
     (
-            datetime(2025, 4, 6, 19, 37, 28, tzinfo=timezone.utc),
-            datetime(2025, 4, 6, 22, 0, 0)  # UTC+3 → Moscow Time
+            datetime(datetime.now(timezone.utc).year, datetime.now(timezone.utc).month, datetime.now(timezone.utc).day, datetime.now(timezone.utc).hour, 37, 28, tzinfo=timezone.utc),
+            datetime(datetime.now().year, datetime.now().month, datetime.now().day, datetime.now().hour, 0, 0, tzinfo=settings.local_tz)  # UTC+3 → Moscow Time
     ),
 
     # UNIX-время (int)

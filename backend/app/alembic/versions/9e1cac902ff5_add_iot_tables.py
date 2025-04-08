@@ -1,8 +1,8 @@
 """add iot tables
 
-Revision ID: d16636fa67ee
+Revision ID: 9e1cac902ff5
 Revises: 1a31ce608336
-Create Date: 2025-04-07 00:23:00.300639
+Create Date: 2025-04-07 18:39:22.160361
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import sqlmodel.sql.sqltypes
 
 
 # revision identifiers, used by Alembic.
-revision = 'd16636fa67ee'
+revision = '9e1cac902ff5'
 down_revision = '1a31ce608336'
 branch_labels = None
 depends_on = None
@@ -55,7 +55,8 @@ def upgrade():
     )
     op.create_index(op.f('ix_devicedata_id'), 'devicedata', ['id'], unique=False)
     op.create_table('device',
-    sa.Column('name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('name', sqlmodel.sql.sqltypes.AutoString(length=32), nullable=False),
+    sa.Column('extra_name', sqlmodel.sql.sqltypes.AutoString(length=32), nullable=True),
     sa.Column('type', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False),
     sa.Column('pin', sqlmodel.sql.sqltypes.AutoString(length=10), nullable=True),
     sa.Column('description', sqlmodel.sql.sqltypes.AutoString(), nullable=True),

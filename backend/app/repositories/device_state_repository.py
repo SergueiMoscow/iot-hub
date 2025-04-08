@@ -5,7 +5,7 @@ from app.models import DeviceState, Device
 
 
 async def get_device_state_by_device_id(session: AsyncSession, device_id: int) -> DeviceState | None:
-    result = await session.exec(select(DeviceState).where(DeviceState.device_id == device_id))
+    result = await session.scalars(select(DeviceState).where(DeviceState.device_id == device_id))
     if result:
         return result.first()
     return None

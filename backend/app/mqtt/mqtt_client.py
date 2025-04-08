@@ -88,31 +88,31 @@ class MQTTClientManager:
 
     async def start(self):
         self._should_stop.clear()
-        # try:
-        async with self.create_client() as client:
-            self.client = client
-            await self.on_connect()
-            await self.subscribe(client)
-            await self.message_handler(client)
-        # except Exception as e:
-        #     logger.error(f"MQTT client error: {e}")
-        # finally:
-        #     self.client = None
+        try:
+            async with self.create_client() as client:
+                self.client = client
+                await self.on_connect()
+                await self.subscribe(client)
+                await self.message_handler(client)
+        except Exception as e:
+            logger.error(f"MQTT client error: {e}")
+        finally:
+            self.client = None
 
     def run_in_thread(self):
         self.mqtt_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.mqtt_loop)
-        # try:
-        self._client_task = self.mqtt_loop.create_task(self.start())
-        self.mqtt_loop.run_until_complete(self._client_task)
-        # except asyncio.CancelledError:
-        #     pass
-        # except Exception as e:
-        #     logger.error(f"MQTT thread error: {e}")
-        # finally:
-        #     if self.mqtt_loop.is_running():
-        #         self.mqtt_loop.close()
-        #     self.mqtt_loop = None
+        try:
+            self._client_task = self.mqtt_loop.create_task(self.start())
+            self.mqtt_loop.run_until_complete(self._client_task)
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"MQTT thread error: {e}")
+        finally:
+            if self.mqtt_loop.is_running():
+                self.mqtt_loop.close()
+            self.mqtt_loop = None
 
     async def stop(self):
         """Корректная остановка клиента"""
@@ -140,7 +140,7 @@ async def lifespan(app: FastAPI):
 
     try:
         yield {"mqtt_manager": manager}  # Возвращаем словарь с менеджером
-        await manager.stop()
+        # await manager.stop()
     finally:
         # Корректная остановка
         if manager.thread:

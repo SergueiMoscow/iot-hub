@@ -1,6 +1,6 @@
 import pytest
 
-from app.core.db import async_engine, AsyncSession, engine
+from app.core.db import AsyncSession, engine
 from app.models import DeviceState
 from app.repositories.device_state_repository import get_device_state_by_device_id, \
     get_or_create_device_state_by_device_id, update_or_create_device_state_by_device_id
@@ -10,7 +10,7 @@ from sqlmodel import Session, select
 @pytest.mark.asyncio
 @pytest.mark.usefixtures('apply_migrations')
 async def test_get_device_state_by_id(created_device_state):
-    async with AsyncSession(async_engine) as session:
+    async with AsyncSession() as session:
         device_state = await get_device_state_by_device_id(
             session=session,
             device_id=created_device_state.device_id,
@@ -22,7 +22,7 @@ async def test_get_device_state_by_id(created_device_state):
 @pytest.mark.asyncio
 @pytest.mark.usefixtures('apply_migrations')
 async def test_get_device_state_by_id_not_found(created_device_state):
-    async with AsyncSession(async_engine) as session:
+    async with AsyncSession() as session:
         device_state = await get_device_state_by_device_id(
             session=session,
             device_id=created_device_state.device_id + 1,
@@ -34,7 +34,7 @@ async def test_get_device_state_by_id_not_found(created_device_state):
 @pytest.mark.usefixtures('apply_migrations')
 async def test_get_or_create_device_state_by_device_id(created_device):
     value = 'on'
-    async with AsyncSession(async_engine) as session:
+    async with AsyncSession() as session:
         await get_or_create_device_state_by_device_id(
             session=session,
             device_id=created_device.id,
@@ -50,7 +50,7 @@ async def test_get_or_create_device_state_by_device_id(created_device):
 @pytest.mark.usefixtures('apply_migrations')
 async def test_update_or_create_device_state_by_device_id_create(created_device):
     value = 'on'
-    async with AsyncSession(async_engine) as session:
+    async with AsyncSession() as session:
         await update_or_create_device_state_by_device_id(
             session=session,
             device_id=created_device.id,
@@ -67,7 +67,7 @@ async def test_update_or_create_device_state_by_device_id_create(created_device)
 @pytest.mark.usefixtures('apply_migrations')
 async def test_update_or_create_device_state_by_device_id_create(created_device_state):
     new_value = '20'
-    async with AsyncSession(async_engine) as session:
+    async with AsyncSession() as session:
         await update_or_create_device_state_by_device_id(
             session=session,
             device_id=created_device_state.device_id,

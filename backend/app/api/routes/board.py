@@ -4,11 +4,11 @@ import os
 from fastapi import APIRouter, HTTPException, UploadFile, Form
 from sqlmodel import Session, select
 from app.api.deps import SessionDep
-from app.core.db import engine
+from app.core.db import engine, AsyncSession
 from app.models.controller_board import ControllerBoard, create_or_update_controller_board
 from app.models.controller_file_request import ControllerFileRequest
 from app.services.get_active_mqtt_config import get_active_mqtt_config
-from app.services.process_messages import process_startup_message
+from app.services.process_startup_message import process_startup_message
 
 router = APIRouter(prefix='/mqtt', tags=['mqtt'])
 
@@ -57,7 +57,7 @@ async def upload_file(
 
     if file.filename == 'mqtt.json':
         mqtt_config = get_active_mqtt_config(file_path)
-        with Session(engine) as session:
+        with AsyncSession(async_engine) as session:
             await create_or_update_controller_board(
                 session=session,
                 topic=topic,
@@ -67,5 +67,5 @@ async def upload_file(
     elif file.filename == 'devices.json':
         with open(file_path, 'r') as f:
             devices_json = json.load(f)
-        process_startup_message(session=session, devices=devices_json, controller_id=controller_board.id)
+        await process_startup_message(session=session, devices=devices_json, controller_id=controller_board.id)
     return {'message': f'File saved to {file_path}'}

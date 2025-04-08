@@ -6,7 +6,8 @@ from typing import Optional, List
 
 
 class DeviceBase(SQLModel):
-    name: str = Field(max_length=255)
+    name: str = Field(max_length=32)
+    extra_name: Optional[str] = Field(max_length=32, default=None)
     type: str = Field(max_length=50)
     pin: Optional[str] = Field(max_length=10, default=None)
     description: Optional[str] = Field(default=None)

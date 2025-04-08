@@ -139,6 +139,8 @@ class Settings(BaseSettings):
         self._check_default_secret('FIRST_SUPERUSER_PASSWORD', self.FIRST_SUPERUSER_PASSWORD)
         return self
 
+    DEBUG: bool = False
+
 
 
 settings = Settings()

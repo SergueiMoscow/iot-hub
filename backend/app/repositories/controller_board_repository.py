@@ -3,7 +3,7 @@ from sqlmodel import select
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.db import async_engine
+# from app.core.db import async_engine
 from app.models import ControllerBoard
 
 
