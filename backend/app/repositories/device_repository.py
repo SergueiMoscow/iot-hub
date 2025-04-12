@@ -7,6 +7,19 @@ from app.models import Device
 from app.models.device import DeviceCreate
 
 
+async def get_device_type_by_name_and_controller_id(
+        session: AsyncSession,
+        device_name: str,
+        controller_id: int,
+) -> str | None:
+    result = await session.scalars(
+        select(Device.type).where(
+            Device.name == device_name,
+            Device.controller_id == controller_id,
+        )
+    )
+    return result.first()
+
 async def get_device_by_name_and_controller_id(
         session: AsyncSession,
         device_name: str,

@@ -12,27 +12,6 @@ from app.models.user import User, UserCreate
 # Синхронный движок
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
-# Асинхронный движок
-# def get_async_engine():
-#     uri = str(settings.SQLALCHEMY_DATABASE_URI).replace("postgresql+psycopg", "postgresql+asyncpg")
-#     if 'options' in uri:
-#         uri = uri.split('?')[0]
-#     async_engine = create_async_engine(
-#         uri,
-#         echo=True,
-#         future=True
-#     )
-#     return async_engine
-
-# async_engine = get_async_engine()
-
-# class AsyncSession(AsyncSessionSQLModel):
-#     async def __aenter__(self):
-#         await super().__aenter__()
-#         await self.exec(text(f'SET search_path TO {settings.POSTGRES_SCHEMA}'))
-#         await self.commit()
-#         return self
-
 
 class DatabaseConnector:
     @staticmethod
@@ -55,7 +34,7 @@ class DatabaseConnector:
                 "postgresql+asyncpg"
             ),
             pool_pre_ping=True,
-            echo=settings.DEBUG
+            echo=False  # settings.DEBUG
         )
 
     @classmethod

@@ -2,12 +2,13 @@ import json
 import secrets
 from datetime import datetime
 import pytz
-from app.core.db import engine
+from app.core.db import engine, AsyncSession
 from sqlmodel import Session
 from app.core.config import settings
 from app.core.setup_logger import setup_logger
-from app.models.controller_board import create_or_update_controller_board
+from app.repositories.controller_board_repository import create_or_update_controller_board
 from app.models.controller_file_request import ControllerFileRequest
+from app.repositories.controller_file_request_repository import create_controller_file_request
 from app.services.process_messages import process_state_message
 from app.services.utils import is_json, get_root_topic
 import aiomqtt
@@ -32,23 +33,22 @@ async def request_file_from_controller(client: aiomqtt.Client, device_topic: str
         'secret_key': secret_key,
     }
 
-    await client.publish(send_file_topic, json.dumps(send_file_message))
-    logger.info(f'Sent sendFile command to {send_file_topic}')
-
-    with Session(engine) as session:
+    async with AsyncSession() as session:
         try:
             request = ControllerFileRequest(
                 topic=device_topic,
                 secret_key=secret_key,
-                requested_at=datetime.now(pytz.utc),
+                requested_at=datetime.now(),
                 filename=filename,
             )
-            session.add(request)
-            session.commit()
+            await create_controller_file_request(session, request)
             logger.info(f'Saved file request for {device_topic} with secret_key: {secret_key}')
         except Exception as e:
             logger.error(f'Failed to save file request: {e}')
             session.rollback()
+
+    await client.publish(send_file_topic, json.dumps(send_file_message))
+    logger.info(f'Sent sendFile command to {send_file_topic}')
 
 
 async def handle_startup(client: aiomqtt.Client, topic: str, payload: str):
@@ -69,7 +69,7 @@ async def handle_startup(client: aiomqtt.Client, topic: str, payload: str):
     await request_file_from_controller(client, device_topic, 'mqtt.json')
 
     # Регистрируем в таблице модели ControllerBoard
-    with Session(engine) as session:
+    async with AsyncSession() as session:
         await create_or_update_controller_board(
             session=session,
             topic=device_topic,

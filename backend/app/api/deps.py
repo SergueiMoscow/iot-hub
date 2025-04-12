@@ -12,11 +12,12 @@ from sqlmodel import Session
 
 from app.core import security
 from app.core.config import settings
-from app.core.db import engine
+from app.core.db import engine, AsyncSession
 from app.core.setup_logger import setup_logger
 from app.models.user import TokenPayload, User
 from app.mqtt.mqtt_client import MQTTClientManager
-
+from sqlalchemy.ext.asyncio import AsyncSession as AsyncSessionType
+from sqlalchemy import select
 
 logger = setup_logger(__name__)
 
@@ -26,12 +27,20 @@ reusable_oauth2 = OAuth2PasswordBearer(
 
 
 def get_db() -> Generator[Session, None, None]:
+    """Синхронная сессия для legacy-кода"""
     with Session(engine) as session:
+        yield session
+
+
+async def get_async_db() -> AsyncGenerator[AsyncSessionType, None]:
+    """Асинхронная сессия для нового кода"""
+    async with AsyncSession() as session:
         yield session
 
 
 SessionDep = Annotated[Session, Depends(get_db)]
 TokenDep = Annotated[str, Depends(reusable_oauth2)]
+AsyncSessionDep = Annotated[AsyncSessionType, Depends(get_async_db)]
 
 
 def get_current_user(session: SessionDep, token: TokenDep) -> User:
@@ -52,6 +61,31 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
         raise HTTPException(status_code=400, detail="Inactive user")
     return user
 
+
+async def get_current_user_async(
+        session: AsyncSessionDep,
+        token: TokenDep
+) -> User:
+    """Асинхронная версия (рекомендуется для нового кода)"""
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
+        )
+        token_data = TokenPayload(**payload)
+    except (InvalidTokenError, ValidationError):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Could not validate credentials",
+        )
+
+    result = await session.exec(
+        select(User).where(User.id == token_data.sub)
+    )
+    user = result.first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 

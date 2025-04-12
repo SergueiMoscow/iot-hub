@@ -1,8 +1,6 @@
 import logging
 from datetime import datetime
-from sqlalchemy import select
-from sqlmodel import Field, SQLModel, Relationship, Column, DateTime, func, Session
-from sqlalchemy.exc import IntegrityError
+from sqlmodel import Field, SQLModel, Relationship, Column, DateTime, func
 from typing import Optional, List
 
 logging.basicConfig(level=logging.INFO)
@@ -58,31 +56,3 @@ class ControllerBoardsPublic(SQLModel):
 #             instance.updated_at = datetime.now()
 
 
-async def create_or_update_controller_board(session: Session, topic: str, **kwargs):
-    # Попробуем найти запись с данным topic
-    statement = select(ControllerBoard).where(ControllerBoard.topic == topic)
-    result = session.exec(statement)
-    controller_board_row = result.first()
-
-    # Если запись не найдена, создаем новую
-    if not controller_board_row:
-        controller_board = ControllerBoard(topic=topic, **kwargs)
-        session.add(controller_board)
-    else:
-        # Если запись найдена, обновляем её
-        controller_board = controller_board_row[0]
-
-        # Если запись найдена, обновляем её
-        for key, value in kwargs.items():
-            if hasattr(controller_board, key):
-                setattr(controller_board, key, value)
-            else:
-                logger.warning(f'Attribute {key} not found in ControllerBoard')
-        controller_board.updated_at = datetime.now()
-    try:
-        session.commit()
-    except IntegrityError:
-        session.rollback()
-        raise
-
-    return controller_board

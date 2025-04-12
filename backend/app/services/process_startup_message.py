@@ -107,6 +107,15 @@ async def process_startup_message(
                     sensors=["temperature", "humidity"]
                 )
 
+            case "MQ":
+                devices = await process_device(
+                    session=session,
+                    controller_id=controller_id,
+                    device_key=device_key,
+                    base_data=base_data,
+                    sensors=["gas_raw", "gas_ppm"]
+                )
+
             case _:
                 devices = await process_device(
                     session=session,
@@ -116,10 +125,10 @@ async def process_startup_message(
                 )
 
         # Обработка триггеров для всех устройств
-        for device in devices:
-            if "triggers" in device_data:
-                await process_triggers(
-                    session=session,
-                    device=device,
-                    triggers_data=device_data["triggers"]
-                )
+        # for device in devices:
+        #     if "triggers" in device_data:
+        #         await process_triggers(
+        #             session=session,
+        #             device=device,
+        #             triggers_data=device_data["triggers"]
+        #         )

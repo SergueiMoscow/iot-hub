@@ -4,7 +4,8 @@ from datetime import datetime
 
 
 class DeviceStateBase(SQLModel):
-    value: str
+    parameter: Optional[str] = Field(max_length=32, default=None)
+    value: float
     last_updated: datetime = Field(default_factory=datetime.now)
 
 class DeviceStateCreate(DeviceStateBase):
@@ -35,6 +36,7 @@ class DeviceStatePublic(SQLModel):
             device_name=db_state.device.name,
             device_type=db_state.device.type,
             device_description=db_state.device.description,
+            parameter=db_state.parameter,
             value=db_state.value,
             last_updated=db_state.last_updated
         )

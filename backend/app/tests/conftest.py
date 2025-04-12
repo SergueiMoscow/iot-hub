@@ -122,7 +122,7 @@ def created_device(created_controller_board):
 def created_device_state(created_device):
     device_state = DeviceState(
         device_id=created_device.id,
-        value='10',
+        value=10.0,
     )
     with Session(engine) as session:
         session.add(device_state)
