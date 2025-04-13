@@ -6,6 +6,8 @@ import { request as __request } from "./core/request"
 import type {
   ControllerBoardsGetBoardsData,
   ControllerBoardsGetBoardsResponse,
+  ControllerBoardsGetControllerStateData,
+  ControllerBoardsGetControllerStateResponse,
   ControllerBoardsToggleRelayData,
   ControllerBoardsToggleRelayResponse,
   ItemsReadItemsData,
@@ -60,7 +62,7 @@ export class ControllerBoardsService {
    * @param data The data for the request.
    * @param data.skip
    * @param data.limit
-   * @returns ControllerBoardPublic Successful Response
+   * @returns ControllerBoardsPublic Successful Response
    * @throws ApiError
    */
   public static getBoards(
@@ -72,6 +74,28 @@ export class ControllerBoardsService {
       query: {
         skip: data.skip,
         limit: data.limit,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Controller State
+   * @param data The data for the request.
+   * @param data.id
+   * @returns DeviceStatesPublic Successful Response
+   * @throws ApiError
+   */
+  public static getControllerState(
+    data: ControllerBoardsGetControllerStateData,
+  ): CancelablePromise<ControllerBoardsGetControllerStateResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/controller_state/{id}",
+      path: {
+        id: data.id,
       },
       errors: {
         422: "Validation Error",

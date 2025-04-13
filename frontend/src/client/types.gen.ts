@@ -23,9 +23,29 @@ export type ControllerBoardPublic = {
   period?: number
   description?: string
   access_key?: string
+  id: number
   created_at: string
   updated_at: string
-  id: number
+}
+
+export type ControllerBoardsPublic = {
+  data: Array<ControllerBoardPublic>
+  count: number
+}
+
+export type DeviceStatePublic = {
+  topic: string
+  controller_description: string
+  device_name: string
+  device_type: string
+  device_description: string | null
+  value: number
+  last_updated: string
+}
+
+export type DeviceStatesPublic = {
+  data: Array<DeviceStatePublic>
+  count: number
 }
 
 export type HTTPValidationError = {
@@ -131,7 +151,13 @@ export type ControllerBoardsGetBoardsData = {
   skip?: number
 }
 
-export type ControllerBoardsGetBoardsResponse = ControllerBoardPublic
+export type ControllerBoardsGetBoardsResponse = ControllerBoardsPublic
+
+export type ControllerBoardsGetControllerStateData = {
+  id: number
+}
+
+export type ControllerBoardsGetControllerStateResponse = DeviceStatesPublic
 
 export type ControllerBoardsToggleRelayData = {
   name: string

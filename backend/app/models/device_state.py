@@ -25,7 +25,8 @@ class DeviceStatePublic(SQLModel):
     device_name: str
     device_type: str
     device_description: Optional[str]
-    value: str
+    parameter: Optional[str]
+    value: float
     last_updated: datetime
 
     @classmethod
