@@ -106,7 +106,7 @@ export class ControllerBoardsService {
   /**
    * Toggle Relay
    * @param data The data for the request.
-   * @param data.topic
+   * @param data.id
    * @param data.name
    * @param data.state
    * @returns unknown Successful Response
@@ -117,9 +117,9 @@ export class ControllerBoardsService {
   ): CancelablePromise<ControllerBoardsToggleRelayResponse> {
     return __request(OpenAPI, {
       method: "POST",
-      url: "/api/v1/boards/{topic}/relay/{name}",
+      url: "/api/v1/boards/{id}/relay/{name}",
       path: {
-        topic: data.topic,
+        id: data.id,
         name: data.name,
       },
       query: {

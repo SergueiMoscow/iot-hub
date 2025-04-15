@@ -25,6 +25,8 @@ async def process_state_message(payload: dict, topic: str):
 
         for device_name, state in payload.items():
             device_type = await get_device_type_by_name_and_controller_id(session=session, device_name=device_name, controller_id=controller.id)
+            if device_name == 'time':
+                continue
 
             if not device_type:
                 logger.error(f"Device {device_name} not found for controller {controller.id}")

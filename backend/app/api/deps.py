@@ -15,7 +15,6 @@ from app.core.config import settings
 from app.core.db import engine, AsyncSession
 from app.core.setup_logger import setup_logger
 from app.models.user import TokenPayload, User
-from app.mqtt.mqtt_client import MQTTClientManager
 from sqlalchemy.ext.asyncio import AsyncSession as AsyncSessionType
 from sqlalchemy import select
 
@@ -96,21 +95,3 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
             status_code=403, detail="The user doesn't have enough privileges"
         )
     return current_user
-
-
-async def get_mqtt_client() -> AsyncGenerator[aiomqtt.Client, None]:
-    manager = MQTTClientManager()
-    if not manager.client:
-        raise RuntimeError("MQTT client is not initialized")
-
-    try:
-        yield manager.client
-    except Exception as e:
-        logger.error(f"MQTT client error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="MQTT service unavailable"
-        )
-
-
-MqttClientDep = Annotated[aiomqtt.Client, Depends(get_mqtt_client)]

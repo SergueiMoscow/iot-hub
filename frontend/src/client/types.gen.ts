@@ -39,6 +39,7 @@ export type DeviceStatePublic = {
   device_name: string
   device_type: string
   device_description: string | null
+  parameter: string | null
   value: number
   last_updated: string
 }
@@ -160,9 +161,9 @@ export type ControllerBoardsGetControllerStateData = {
 export type ControllerBoardsGetControllerStateResponse = DeviceStatesPublic
 
 export type ControllerBoardsToggleRelayData = {
+  id: number
   name: string
   state: string
-  topic: string
 }
 
 export type ControllerBoardsToggleRelayResponse = unknown

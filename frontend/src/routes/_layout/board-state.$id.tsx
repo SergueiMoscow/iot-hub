@@ -7,13 +7,13 @@ import {
   VStack,
   Text,
   Box,
-  SwitchControl,
   Switch,
 } from "@chakra-ui/react"
-
-import { useQuery } from "@tanstack/react-query"
+import { Toaster, toaster } from "@/components/ui/toaster"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { FiSearch } from "react-icons/fi"
+import { useState } from "react"
 
 import { ControllerBoardsService } from "@/client"
 import PendingItems from "@/components/Pending/PendingItems"
@@ -25,19 +25,43 @@ export const Route = createFileRoute("/_layout/board-state/$id")({
 function BoardStateTable() {
   const { id } = Route.useParams()
   const navigate = useNavigate({ from: Route.fullPath })
+  const queryClient = useQueryClient()
+  // const toast = useToast()
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryFn: () => ControllerBoardsService.getControllerState({ id: parseInt(id) }),
     queryKey: ["board-state", id],
   })
 
-  const handleRelayToggle = (deviceName: string, newValue: boolean) => {
-    // Здесь будет логика обновления состояния реле
-    console.log(`Toggle ${deviceName} to ${newValue ? "ON" : "OFF"}`)
-    // TODO: вызвать API для обновления состояния
+  const handleRelayToggle = async (deviceName: string, newValue: boolean) => {
+    try {
+      setIsRefreshing(true)
+      
+      // Вызываем API для переключения реле
+      await ControllerBoardsService.toggleRelay({
+        id: parseInt(id),
+        name: deviceName,
+        state: newValue ? "ON" : "OFF"  // Обратите внимание на строковые значения
+      })
+
+      // Ждем секунду перед обновлением данных
+      setTimeout(async () => {
+        await queryClient.invalidateQueries({ queryKey: ["board-state", id] })
+        setIsRefreshing(false)
+      }, 1000)
+
+    } catch (error) {
+      setIsRefreshing(false)
+      toaster.create({
+        description: "Failed to update relay state",
+        type: "error",
+        duration: 3000,
+      })
+    }
   }
 
-  if (isLoading) {
+  if (isLoading || isRefreshing) {
     return <PendingItems />
   }
 
@@ -71,8 +95,8 @@ function BoardStateTable() {
         </Table.Row>
       </Table.Header>
       <Table.Body>
-        {data.data.map((device) => (
-          <Table.Row key={`${device.device_name}-${device.device_type}`}>
+        {data.data.map((device, index) => (
+          <Table.Row key={`${device.device_name}-${device.device_type}-${index}`}>
             <Table.Cell>{device.device_name}</Table.Cell>
             <Table.Cell>{device.device_type}</Table.Cell>
             <Table.Cell>{device.device_description || "-"}</Table.Cell>
@@ -80,17 +104,15 @@ function BoardStateTable() {
               {device.device_type === "Relay" ? (
                 <Switch.Root
                   checked={device.value === 1}
-                  onCheckedChange={(e) => {
-                    console.log(e.checked);
-                    handleRelayToggle(device.device_name, e.checked);
-                  }}
+                  onCheckedChange={(e) => handleRelayToggle(device.device_name, e.checked)}
                   colorScheme="green"
+                  disabled={isRefreshing}
                 >
                   <Switch.HiddenInput />
-                    <Switch.Control>
-                      <Switch.Thumb />
-                    </Switch.Control>
-                  </Switch.Root>
+                  <Switch.Control>
+                    <Switch.Thumb />
+                  </Switch.Control>
+                </Switch.Root>
               ) : (
                 <Text>{device.value}</Text>
               )}

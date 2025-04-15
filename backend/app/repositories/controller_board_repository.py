@@ -18,6 +18,12 @@ async def get_controller_by_topic(session: AsyncSession, topic: str) -> Controll
     return result.first()
 
 
+async def get_controller_by_id(session: AsyncSession, id: int) -> ControllerBoard:
+    result = await session.scalars(select(ControllerBoard).where(ControllerBoard.id == id))
+    return result.first()
+
+
+
 async def create_or_update_controller_board(session: AsyncSession, topic: str, **kwargs):
     # Попробуем найти запись с данным topic
     statement = select(ControllerBoard).where(ControllerBoard.topic == topic)

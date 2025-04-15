@@ -1,15 +1,21 @@
 # backend/app/api/routes/boards.py
 import json
-from typing import Annotated, Any
-from fastapi import APIRouter, Depends, HTTPException
+import logging
+import time
+from typing import Any
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import func, select
 
-from app.api.deps import get_current_user, SessionDep, MqttClientDep, CurrentUser
+from app.api.dep_mqtt_client import get_mqtt_manager
+from app.api.deps import get_current_user, SessionDep, CurrentUser, AsyncSessionDep
 from app.models import Device
-from app.models.controller_board import ControllerBoard, ControllerBoardPublic, ControllerBoardsPublic
+from app.models.controller_board import ControllerBoard, ControllerBoardsPublic
 from app.models.device_state import DeviceStatePublic, DeviceState, DeviceStatesPublic
+from app.mqtt.mqtt_client import MQTTClientManager
+from app.repositories.controller_board_repository import get_controller_by_id
 
 router = APIRouter(tags=['ControllerBoards'])
+logger = logging.getLogger(__name__)
 
 @router.get('/boards', dependencies=[Depends(get_current_user)], response_model=ControllerBoardsPublic)
 async def get_boards(session: SessionDep, current_user: CurrentUser, skip: int = 0, limit: int = 100) -> Any:
@@ -50,14 +56,29 @@ def get_controller_state(id: int, session: SessionDep):
     return DeviceStatesPublic(data=public_states, count=len(public_states))
 
 
-@router.post('/boards/{topic}/relay/{name}')
+@router.post('/boards/{id}/relay/{name}')
 async def toggle_relay(
-    topic: str,
+    id: int,
     name: str,
     state: str,
-    session: SessionDep,
-    mqtt_client: MqttClientDep,
+    session: AsyncSessionDep,
     current_user: CurrentUser,
+    mqtt_manager: MQTTClientManager = Depends(get_mqtt_manager),
 ):
-    mqtt_client.publish(f'{topic}/set/relay', json.dumps({'name': name, 'state': state}))
-    return {'message': f'Relay {name} set to {state}'}
+    controller = await get_controller_by_id(session=session, id=id)
+    if not controller:
+        raise HTTPException(status_code=404, detail="Controller not found")
+    topic = controller.topic
+    try:
+        start_time = time.time()
+        await mqtt_manager.send_mqtt_message(topic + f'/set/{name}', state)
+        execution_time = time.time() - start_time
+        logger.info(f"Toggle relay execution time: {execution_time:.4f} seconds")
+        return {
+            'message': f'Relay {name} set to {state}',
+            'execution_time': execution_time
+        }
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=f"MQTT client not connected: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Failed to send MQTT command: {str(e)}")
